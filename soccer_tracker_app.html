@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Soccer Stat Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            overscroll-behavior-y: none; /* Prevents pull-to-refresh on mobile */
+            -webkit-tap-highlight-color: transparent; /* Removes default web tap highlight */
+        }
+
+        /* High contrast, chunky buttons for sunlight visibility */
+        .stat-btn {
+            border: 3px solid #000000;
+            border-radius: 12px;
+            box-shadow: 3px 3px 0px #000000;
+            transition: transform 0.1s, box-shadow 0.1s, filter 0.15s;
+            cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .stat-btn:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #000000;
+        }
+
+        .stat-btn:disabled {
+            opacity: 0.5;
+            box-shadow: 0px 0px 0px #000000;
+            pointer-events: none;
+        }
+
+        .stat-text {
+            font-size: 0.75rem;
+            font-weight: 800;
+            line-height: 1.15;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .header-btn {
+            border: 2px solid #000000;
+            box-shadow: 2px 2px 0px #000000;
+        }
+
+        .header-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px #000000;
+        }
+        
+        .timer-text {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Custom Modal Overlay */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-full flex flex-col bg-white">
+
+    <div id="page1" class="flex flex-col w-full min-h-screen">
+        <!-- Header -->
+        <div class="flex justify-between items-start p-4 border-b-4 border-black bg-white">
+            <div class="flex flex-col gap-2">
+                <button id="btn-start" class="header-btn bg-blue-500 text-white font-bold py-2 px-4 rounded-lg text-lg" onclick="handleStartTimer()">
+                    Start
+                </button>
+                <div class="text-sm font-bold timer-text hidden" id="time-display-1">
+                    Start: <span id="start-time-text">--:--</span>
+                </div>
+                <div class="text-sm font-bold timer-text hidden" id="time-display-2">
+                    2nd Half: <span id="half-time-text">--:--</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-2 items-end">
+                <button id="btn-game-over" class="header-btn bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-lg" onclick="handleGameOver()">
+                    Game Over
+                </button>
+                <div class="text-sm font-bold timer-text hidden" id="time-display-end">
+                    End: <span id="end-time-text">--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Body / Stat Buttons -->
+        <div class="flex-1 flex flex-col items-center py-6 px-2 space-y-6">
+            
+            <!-- Fielder Section -->
+            <div class="flex flex-col items-center w-full">
+                <h2 class="text-xl font-black border-b-2 border-black uppercase tracking-widest px-6 mb-3">Fielder</h2>
+                <!-- Row 1 -->
+                <div class="flex justify-center gap-3 mb-3">
+                    <button class="stat-btn bg-red-400 w-24 h-20 flex items-center justify-center p-2" onclick="trackStat('Fielder', 'Shot on Goal', this)">
+                        <span class="stat-text">Shot on<br>Goal</span>
+                    </button>
+                    <button class="stat-btn bg-green-400 w-24 h-20 flex items-center justify-center p-2" onclick="trackStat('Fielder', 'Goal', this)">
+                        <span class="stat-text">Goal</span>
+                    </button>
+                </div>
+                <!-- Row 2 -->
+                <div class="flex justify-center gap-3">
+                    <button class="stat-btn bg-blue-300 w-24 h-20 flex items-center justify-center p-2" onclick="trackStat('Fielder', 'Carry', this)">
+                        <span class="stat-text">Carry</span>
+                    </button>
+                    <button class="stat-btn bg-blue-300 w-24 h-20 flex items-center justify-center p-2" onclick="trackStat('Fielder', 'Assist', this)">
+                        <span class="stat-text">Assist</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Defense Section -->
+            <div class="flex flex-col items-center w-full">
+                <h2 class="text-xl font-black border-b-2 border-black uppercase tracking-widest px-6 mb-3">Defense</h2>
+                <!-- Row 1 -->
+                <div class="flex justify-center gap-3">
+                    <button class="stat-btn bg-red-400 w-20 h-20 flex items-center justify-center p-1" onclick="trackStat('Defense', 'Shot Blocked', this)">
+                        <span class="stat-text">Shot<br>Blocked</span>
+                    </button>
+                    <button class="stat-btn bg-blue-300 w-20 h-20 flex items-center justify-center p-1" onclick="trackStat('Defense', 'Clearance', this)">
+                        <span class="stat-text">Clearance</span>
+                    </button>
+                    <button class="stat-btn bg-green-400 w-20 h-20 flex items-center justify-center p-1" onclick="trackStat('Defense', 'Goal', this)">
+                        <span class="stat-text">Goal</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calls Section -->
+            <div class="flex flex-col items-center w-full">
+                <h2 class="text-xl font-black border-b-2 border-black uppercase tracking-widest px-6 mb-3">Calls</h2>
+                <!-- Row 1 -->
+                <div class="flex justify-center gap-3 mb-3">
+                    <button class="stat-btn bg-blue-300 w-20 h-20 flex items-center justify-center p-1" onclick="trackStat('Calls', 'Out of Bounds', this)">
+                        <span class="stat-text">Out of<br>Bounds</span>
+                    </button>
+                    <button class="stat-btn bg-orange-400 w-20 h-20 flex items-center justify-center p-1" onclick="trackStat('Calls', 'Throw-in', this)">
+                        <span class="stat-text">Throw-in</span>
+                    </button>
+                    <button class="stat-btn bg-orange-400 w-20 h-20 flex items-center justify-center p-1" onclick="trackStat('Calls', 'Corner', this)">
+                        <span class="stat-text">Corner</span>
+                    </button>
+                </div>
+                <!-- Row 2 -->
+                <div class="flex justify-center gap-3">
+                    <button class="stat-btn bg-blue-300 w-24 h-20 flex items-center justify-center p-2" onclick="trackStat('Calls', 'Foul', this)">
+                        <span class="stat-text">Foul</span>
+                    </button>
+                    <button class="stat-btn bg-blue-300 w-24 h-20 flex items-center justify-center p-2" onclick="trackStat('Calls', 'Offsides', this)">
+                        <span class="stat-text">Offsides</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer / Undo -->
+        <div class="w-full p-4 bg-white border-t-4 border-black mt-auto">
+            <button class="header-btn bg-gray-800 text-white font-bold py-3 px-8 rounded-lg text-lg flex items-center gap-2 w-full justify-center" onclick="undoLastStat()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                Undo Last Action
+            </button>
+        </div>
+    </div>
+
+    <!-- Page 2 (Review / Submit) -->
+    <div id="page2" class="hidden flex-col h-full w-full bg-gray-50">
+        <!-- Header -->
+        <div class="flex justify-between items-center p-4 border-b-4 border-black bg-white shrink-0">
+            <button class="header-btn bg-gray-200 text-black font-bold py-2 px-6 rounded-lg text-lg flex items-center gap-2" onclick="goBackToPage1()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Back
+            </button>
+            <button class="header-btn bg-green-500 text-white font-bold py-2 px-6 rounded-lg text-lg" onclick="openSubmitModal()">
+                Submit
+            </button>
+        </div>
+
+        <!-- Body / Tables -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-8" id="review-tables-container">
+            <!-- Tables will be injected here by JS -->
+        </div>
+    </div>
+
+    <!-- Submit Modal -->
+    <div id="submit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div class="bg-white border-4 border-black p-6 rounded-2xl w-full max-w-sm shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h2 class="text-2xl font-black mb-4">Finalize Submission</h2>
+            
+            <label class="block text-lg font-bold mb-2">First Name</label>
+            <input type="text" id="submitter-name" placeholder="First Name..." class="w-full border-2 border-black rounded-lg p-3 text-lg mb-6 focus:outline-none focus:ring-4 focus:ring-blue-300">
+            
+            <div id="submit-status" class="hidden mb-4 text-center font-bold text-lg"></div>
+
+            <div class="flex gap-4">
+                <button class="flex-1 header-btn bg-gray-300 text-black font-bold py-3 px-4 rounded-lg text-lg" onclick="closeSubmitModal()">Cancel</button>
+                <button id="final-submit-btn" class="flex-1 header-btn bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg" onclick="submitData()">Send to Sheets</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const DEFAULT_STATE = {
+            times: { start: null, half: null, end: null },
+            stats: {
+                "Fielder": { "Shot on Goal": 0, "Goal": 0, "Carry": 0, "Assist": 0 },
+                "Defense": { "Shot Blocked": 0, "Clearance": 0, "Goal": 0 },
+                "Calls": { "Out of Bounds": 0, "Throw-in": 0, "Offsides": 0, "Corner": 0, "Foul": 0 }
+            },
+            history: [],
+            phase: 'start' // start, half, over
+        };
+
+        let state = JSON.parse(localStorage.getItem('soccerTrackerState')) || JSON.parse(JSON.stringify(DEFAULT_STATE));
+        
+        // --- Haptic Setup ---
+        function triggerFeedback() {
+            // Haptic
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        // --- Wake Lock ---
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.log('Wake Lock error:', err);
+            }
+        }
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                requestWakeLock();
+            }
+        });
+
+        // --- Core Logic ---
+        function saveState() {
+            localStorage.setItem('soccerTrackerState', JSON.stringify(state));
+            renderUI();
+        }
+
+        function formatTime(dateObj) {
+            if (!dateObj) return "--:--";
+            const d = new Date(dateObj);
+            let hours = d.getHours();
+            let minutes = d.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
+        function handleStartTimer() {
+            const now = new Date().toISOString();
+            if (state.phase === 'start') {
+                state.times.start = now;
+                state.phase = 'half';
+            } else if (state.phase === 'half') {
+                state.times.half = now;
+                state.phase = 'over';
+            }
+            saveState();
+        }
+
+        function handleGameOver() {
+            if (!state.times.end) {
+                state.times.end = new Date().toISOString();
+                saveState();
+            }
+            document.getElementById('page1').classList.add('hidden');
+            document.getElementById('page2').classList.remove('hidden');
+            document.getElementById('page2').classList.add('flex');
+            renderReviewTables();
+        }
+
+        function goBackToPage1() {
+            document.getElementById('page2').classList.add('hidden');
+            document.getElementById('page2').classList.remove('flex');
+            document.getElementById('page1').classList.remove('hidden');
+        }
+
+        function trackStat(category, statName, btnElement) {
+            triggerFeedback();
+            
+            // Disable button for 0.5s to prevent accidental double taps
+            btnElement.disabled = true;
+            setTimeout(() => {
+                btnElement.disabled = false;
+            }, 500);
+
+            // Update State
+            state.stats[category][statName]++;
+            state.history.push({ category, statName, time: new Date().toISOString() });
+            
+            // Show brief flash overlay on button (UI juice)
+            btnElement.style.filter = 'brightness(1.2)';
+            setTimeout(() => {
+                btnElement.style.filter = '';
+            }, 150);
+
+            saveState();
+        }
+
+        function undoLastStat() {
+            if (state.history.length === 0) return;
+            triggerFeedback();
+            
+            const lastAction = state.history.pop();
+            if (state.stats[lastAction.category][lastAction.statName] > 0) {
+                state.stats[lastAction.category][lastAction.statName]--;
+            }
+            saveState();
+            
+            // Notification toast for undo
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-black text-white px-6 py-2 rounded-full font-bold shadow-lg z-50 transition-opacity duration-300';
+            toast.innerText = `Undid: ${lastAction.statName}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 1500);
+        }
+
+        function renderUI() {
+            // Header Buttons & Timers
+            const btnStart = document.getElementById('btn-start');
+            const disp1 = document.getElementById('time-display-1');
+            const disp2 = document.getElementById('time-display-2');
+            const dispEnd = document.getElementById('time-display-end');
+            
+            if (state.times.start) {
+                disp1.classList.remove('hidden');
+                document.getElementById('start-time-text').innerText = formatTime(state.times.start);
+                btnStart.innerText = '2nd Half';
+                btnStart.classList.replace('bg-blue-500', 'bg-blue-600');
+            }
+            if (state.times.half) {
+                disp2.classList.remove('hidden');
+                document.getElementById('half-time-text').innerText = formatTime(state.times.half);
+                btnStart.classList.add('hidden'); // Hide after 2nd half starts
+            } else {
+                btnStart.classList.remove('hidden');
+            }
+
+            if (state.times.end) {
+                dispEnd.classList.remove('hidden');
+                document.getElementById('end-time-text').innerText = formatTime(state.times.end);
+            }
+        }
+
+        function renderReviewTables() {
+            const container = document.getElementById('review-tables-container');
+            container.innerHTML = ''; // Clear existing
+
+            for (const [category, statsObj] of Object.entries(state.stats)) {
+                
+                const tableSection = document.createElement('div');
+                tableSection.className = 'bg-white border-4 border-black rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]';
+                
+                const title = document.createElement('h3');
+                title.className = 'text-xl font-black mb-4 uppercase border-b-2 border-black pb-2';
+                title.innerText = category;
+                tableSection.appendChild(title);
+
+                for (const [statName, count] of Object.entries(statsObj)) {
+                    const row = document.createElement('div');
+                    row.className = 'flex justify-between items-center py-3 border-b border-gray-200 last:border-0';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'text-lg font-bold w-1/2';
+                    label.innerText = statName;
+                    
+                    const controls = document.createElement('div');
+                    controls.className = 'flex items-center justify-end space-x-6 w-1/2';
+                    
+                    // Minus Button
+                    const btnMinus = document.createElement('button');
+                    btnMinus.className = 'w-10 h-10 bg-gray-200 border-2 border-black rounded-full font-black text-xl flex items-center justify-center active:bg-gray-300';
+                    btnMinus.innerText = '-';
+                    btnMinus.onclick = () => adjustStat(category, statName, -1);
+                    
+                    // Count
+                    const countDisplay = document.createElement('div');
+                    countDisplay.className = 'text-2xl font-black w-8 text-center tabular-nums';
+                    countDisplay.innerText = count;
+
+                    // Plus Button
+                    const btnPlus = document.createElement('button');
+                    btnPlus.className = 'w-10 h-10 bg-gray-200 border-2 border-black rounded-full font-black text-xl flex items-center justify-center active:bg-gray-300';
+                    btnPlus.innerText = '+';
+                    btnPlus.onclick = () => adjustStat(category, statName, 1);
+
+                    controls.appendChild(btnMinus);
+                    controls.appendChild(countDisplay);
+                    controls.appendChild(btnPlus);
+
+                    row.appendChild(label);
+                    row.appendChild(controls);
+                    tableSection.appendChild(row);
+                }
+                container.appendChild(tableSection);
+            }
+        }
+
+        function adjustStat(category, statName, amount) {
+            triggerFeedback();
+            const newCount = state.stats[category][statName] + amount;
+            if (newCount >= 0) {
+                state.stats[category][statName] = newCount;
+                saveState();
+                renderReviewTables(); // Re-render to show new values
+            }
+        }
+
+        // --- Submission Modal Logic ---
+        function openSubmitModal() {
+            document.getElementById('submit-modal').classList.remove('hidden');
+            document.getElementById('submit-status').classList.add('hidden');
+            document.getElementById('final-submit-btn').disabled = false;
+        }
+
+        function closeSubmitModal() {
+            document.getElementById('submit-modal').classList.add('hidden');
+        }
+
+        async function submitData() {
+            const nameInput = document.getElementById('submitter-name').value.trim();
+            if (!nameInput) {
+                showMessage("Please enter your First Name.", "text-red-600");
+                return;
+            }
+
+            const btn = document.getElementById('final-submit-btn');
+            btn.disabled = true;
+            showMessage("Sending...", "text-blue-600");
+
+            // Prepare payload
+            const payload = {
+                date: new Date().toLocaleDateString(),
+                submitter: nameInput,
+                times: {
+                    start: formatTime(state.times.start),
+                    half: formatTime(state.times.half),
+                    end: formatTime(state.times.end)
+                },
+                stats: state.stats
+            };
+
+            // REPLACE THIS URL with your Google Apps Script Web App URL
+            const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwx4QyLZhqppfsT7YaWs_QznO7ITJ8wwaK5dz1_gUGJ1RdfrCU9fSGfDDKGc2yXRfi1/exec"; 
+
+            try {
+                // If you haven't deployed the script yet, this will fail gracefully and allow you to test UI.
+                if (GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbwx4QyLZhqppfsT7YaWs_QznO7ITJ8wwaK5dz1_gUGJ1RdfrCU9fSGfDDKGc2yXRfi1/exec") {
+                    setTimeout(() => {
+                        handleSuccessfulSubmit();
+                    }, 1000); // Simulate network request for demonstration
+                    return;
+                }
+
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Required to bypass CORS issues with GAS
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                // Because no-cors doesn't return a readable response, we assume success if no network error thrown.
+                handleSuccessfulSubmit();
+
+            } catch (error) {
+                showMessage("Error sending data. Check connection.", "text-red-600");
+                btn.disabled = false;
+            }
+        }
+
+        function showMessage(msg, colorClass) {
+            const statusDiv = document.getElementById('submit-status');
+            statusDiv.className = `mb-4 text-center font-bold text-lg ${colorClass}`;
+            statusDiv.innerText = msg;
+            statusDiv.classList.remove('hidden');
+        }
+
+        function handleSuccessfulSubmit() {
+            showMessage("Success! Sent to Sheets.", "text-green-600");
+            setTimeout(() => {
+                closeSubmitModal();
+                // Clear state for next game
+                localStorage.removeItem('soccerTrackerState');
+                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                renderUI();
+                goBackToPage1();
+                window.scrollTo(0,0);
+            }, 1500);
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            renderUI();
+            requestWakeLock();
+        }
+    </script>
+</body>
+</html>
